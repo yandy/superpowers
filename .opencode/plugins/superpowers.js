@@ -76,7 +76,11 @@ export const SuperpowersPlugin = async ({ client, directory }) => {
     const toolMapping = `**Tool Mapping for OpenCode:**
 When skills request actions, substitute OpenCode equivalents:
 - Create or update todos → \`todowrite\`
-- \`Subagent (general-purpose):\` → \`task\` with \`subagent_type: "general"\`
+- \`Subagent (general-purpose):\` → \`task\` with \`subagent_type\` matching the Model Selection tier:
+  - cheap model tier → \`general-small\`
+  - standard model tier → \`general-standard\`
+  - most capable model tier → \`general-max\`
+  The task tool cannot change a subagent's model at runtime, so three general subagents are pre-registered with different model tiers (configured in opencode.json). Always pick the subagent_type that matches the tier Model Selection calls for.
 - Invoke a skill → OpenCode's native \`skill\` tool
 - Read files → \`read\`
 - Create, edit, or delete files → \`apply_patch\`
@@ -109,6 +113,32 @@ ${toolMapping}
       config.skills.paths = config.skills.paths || [];
       if (!config.skills.paths.includes(superpowersSkillsDir)) {
         config.skills.paths.push(superpowersSkillsDir);
+      }
+
+      const SUBAGENT_PRESERVES = {
+        "general-small": {
+          mode: "subagent",
+          hidden: true,
+          description: "General-purpose agent on a fast, cheap model. Maps to the \"cheap model\" tier in Model Selection.",
+          permission: { todowrite: "deny" },
+        },
+        "general-standard": {
+          mode: "subagent",
+          hidden: true,
+          description: "General-purpose agent on a standard model. Maps to the \"standard model\" tier in Model Selection.",
+          permission: { todowrite: "deny" },
+        },
+        "general-max": {
+          mode: "subagent",
+          hidden: true,
+          description: "General-purpose agent on the most capable available model. Maps to the \"most capable model\" tier in Model Selection.",
+          permission: { todowrite: "deny" },
+        },
+      };
+
+      config.agent = config.agent || {};
+      for (const [name, preserves] of Object.entries(SUBAGENT_PRESERVES)) {
+        config.agent[name] = { ...(config.agent[name] || {}), ...preserves };
       }
     },
 
